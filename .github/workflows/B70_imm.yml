@@ -10,8 +10,6 @@ on:
         required: false
         default: 'false'
         type: boolean
-  schedule:
-    - cron: 0 8 * * 1
 
 env:
   REPO_URL: https://github.com/Glunefish/immortalwrt
