@@ -96,7 +96,7 @@ jobs:
     - name: Update feeds
       run: cd openwrt && ./scripts/feeds update -a
 
-    - name: Delete passwall in feeds
+    - name: Load Script
       run: |
         chmod +x $DIY_P2_SH
         cd openwrt
