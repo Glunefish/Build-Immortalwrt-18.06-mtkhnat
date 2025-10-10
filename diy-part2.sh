@@ -16,11 +16,6 @@ rm -rf feeds/packages/lang/golang
 git clone https://github.com/sbwml/packages_lang_golang -b 25.x feeds/packages/lang/golang
 
 
-git clone https://github.com/zzsj0928/luci-app-pushbot ./package/luci-app-pushbot
-
-git clone https://github.com/GruntFish/OP-Packages ./package/OP-Packages
-git clone https://github.com/sirpdboy/luci-app-lucky ./package/luci-app-lucky
-
 # 启用的话添加到config      luci-theme-infinityfreedom-ng=y
 # git clone https://github.com/xiaoqingfengATGH/luci-theme-infinityfreedom ./package/luci-theme-infinityfreedom-ng
 
