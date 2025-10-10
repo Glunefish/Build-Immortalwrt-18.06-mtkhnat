@@ -23,7 +23,7 @@ git clone https://github.com/GruntFish/OP-Packages ./package/OP-Packages
 git clone https://github.com/sirpdboy/luci-app-lucky ./package/luci-app-lucky
 git clone https://github.com/sirpdboy/luci-app-watchdog ./package/luci-app-watchdog
 
-# git clone https://github.com/xiaoqingfengATGH/luci-theme-infinityfreedom ./package/luci-theme-infinityfreedom
+git clone https://github.com/xiaoqingfengATGH/luci-theme-infinityfreedom ./package/luci-theme-infinityfreedom
 
 #git clone --depth 1 https://github.com/xiaorouji/openwrt-passwall-packages.git pw-dependencies
 #git clone --depth 1 https://github.com/xiaorouji/openwrt-passwall.git && mv openwrt-passwall/luci-app-passwall ./ && rm -rf openwrt-passwall
