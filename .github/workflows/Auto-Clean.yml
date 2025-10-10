@@ -35,18 +35,17 @@ jobs:
       github.event_name == 'schedule' || 
       github.event_name == 'workflow_dispatch'
     steps:
-      # 步骤1: 清理旧的Releases
+            # 步骤1: 清理旧的Releases
       - name: Cleanup Old Releases
         uses: actions/github-script@v7
         with:
           script: |
-            // 获取触发信息
+            // 处理不同事件的输入参数
+            const keepReleases = context.eventName === 'workflow_dispatch' 
+              ? parseInt('${{ inputs.keep_releases }}') 
+              : 6;
+              
             console.log(`触发事件: ${context.eventName}`);
-            if (context.eventName === 'workflow_run') {
-              console.log(`由工作流触发: ${context.payload.workflow_run.name}`);
-            }
-            
-            const keepReleases = '${{ inputs.keep_releases }}' ? parseInt('${{ inputs.keep_releases }}') : 6;
             console.log(`🗑️ 开始清理Releases，保留最近 ${keepReleases} 个`);
             
             const releases = await github.rest.repos.listReleases({
@@ -78,12 +77,15 @@ jobs:
             }
             console.log(`✅ Releases清理完成: 删除了 ${deletedReleases} 个`);
 
-      # 步骤2: 清理工作流运行记录（排除Auto-Clean自身）
+      # 步骤2: 清理工作流运行记录
       - name: Cleanup Workflow Runs
         uses: actions/github-script@v7
         with:
           script: |
-            const keepWorkflowRuns = '${{ inputs.keep_workflow_runs }}' ? parseInt('${{ inputs.keep_workflow_runs }}') : 6;
+            const keepWorkflowRuns = context.eventName === 'workflow_dispatch' 
+              ? parseInt('${{ inputs.keep_workflow_runs }}') 
+              : 6;
+              
             console.log(`🗑️ 开始清理工作流记录，保留最近 ${keepWorkflowRuns} 个`);
             
             const workflows = await github.rest.actions.listWorkflowRunsForRepo({
@@ -118,40 +120,3 @@ jobs:
               }
             }
             console.log(`✅ 工作流记录清理完成: 删除了 ${deletedWorkflows} 个`);
-
-      # 步骤3: 删除所有Auto-Clean记录（保留当前运行）
-      - name: Delete All Auto-Clean Records
-        uses: actions/github-script@v7
-        with:
-          script: |
-            console.log(`🔥 开始删除所有Auto-Clean工作流的运行记录`);
-            
-            const allRuns = await github.rest.actions.listWorkflowRunsForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              per_page: 100
-            });
-
-            // 排除当前运行，避免删除自己
-            const autoCleanRuns = allRuns.data.workflow_runs.filter(run => 
-              (run.name === 'Auto-Clean' || run.path.includes('Auto-Clean.yml')) &&
-              run.id !== ${{ github.run_id }}
-            );
-
-            console.log(`📊 找到 ${autoCleanRuns.length} 个Auto-Clean运行记录（排除当前运行）`);
-
-            let deletedAutoClean = 0;
-            for (const run of autoCleanRuns) {
-              try {
-                console.log(`🔥 删除Auto-Clean记录: #${run.id} (${run.conclusion || 'unknown'})`);
-                await github.rest.actions.deleteWorkflowRun({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  run_id: run.id
-                });
-                deletedAutoClean++;
-              } catch (error) {
-                console.log(`❌ 删除Auto-Clean记录失败: #${run.id} - ${error.message}`);
-              }
-            }
-            console.log(`✅ Auto-Clean记录清理完成: 删除了 ${deletedAutoClean} 个`);
