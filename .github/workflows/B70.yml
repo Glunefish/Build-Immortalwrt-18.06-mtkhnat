@@ -1,5 +1,5 @@
 
-name: B70_imm
+name: B70
 
 on:
   repository_dispatch:
@@ -12,12 +12,13 @@ on:
         type: boolean
 
 env:
-  REPO_URL: https://github.com/Glunefish/immortalwrt
-  REPO_BRANCH: main
+  REPO_URL: https://github.com/GruntFish/immortalwrt-18.06-mtkhnat.git
+  REPO_BRANCH: master
   FEEDS_CONF: feeds.conf.default
-  CONFIG_FILE: B70_imm.config
-  DIY_P1_SH: imm-diy-part1.sh
-  DIY_P2_SH: imm-diy-part2.sh
+  CONFIG_FILE: B70.config
+  DIY_P1_SH: diy-part1.sh
+  DIY_P2_SH: diy-part2.sh
+  DIY_P3_SH: diy-part3.sh  
   UPLOAD_BIN_DIR: true
   UPLOAD_FIRMWARE: true
   UPLOAD_RELEASE: true
