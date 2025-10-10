@@ -10,11 +10,11 @@ on:
     inputs:
       keep_releases:
         description: '保留最近几个成功的Release'
-        default: '5'
+        default: '6'
         type: string
       keep_workflow_runs:
         description: '保留最近几个工作流运行记录'
-        default: '5'
+        default: '6'
         type: string
 
 permissions:
@@ -31,7 +31,7 @@ jobs:
         with:
           script: |
             // 手动运行时使用输入值，定时执行时使用默认值
-            const keepReleases = '${{ inputs.keep_releases }}' ? parseInt('${{ inputs.keep_releases }}') : 5;
+            const keepReleases = '${{ inputs.keep_releases }}' ? parseInt('${{ inputs.keep_releases }}') : 6;
             console.log(`🗑️ 开始清理Releases，保留最近 ${keepReleases} 个`);
             
             const releases = await github.rest.repos.listReleases({
@@ -68,7 +68,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const keepWorkflowRuns = '${{ inputs.keep_workflow_runs }}' ? parseInt('${{ inputs.keep_workflow_runs }}') : 5;
+            const keepWorkflowRuns = '${{ inputs.keep_workflow_runs }}' ? parseInt('${{ inputs.keep_workflow_runs }}') : 6;
             console.log(`🗑️ 开始清理工作流记录，保留最近 ${keepWorkflowRuns} 个`);
             
             // 获取所有工作流运行记录
