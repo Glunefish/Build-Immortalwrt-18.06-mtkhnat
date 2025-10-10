@@ -1,4 +1,3 @@
-
 name: B70
 
 on:
@@ -152,25 +151,37 @@ jobs:
         name: OpenWrt_bin${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
         path: openwrt/bin
 
-    - name: Organize files
+    - name: Organize files and check firmware
       id: organize
       if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
       run: |
         cd openwrt/bin/targets/*/*
         rm -rf packages
         echo "FIRMWARE=$PWD" >> $GITHUB_ENV
-        echo "status=success" >> $GITHUB_OUTPUT
+        
+        # 检查是否存在固件文件
+        if ls *.img *.bin *.tar.gz *.tar 2>/dev/null | grep -q .; then
+          echo "files_exist=true" >> $GITHUB_OUTPUT
+          echo "status=success" >> $GITHUB_OUTPUT
+          echo "Found firmware files:" >&2
+          ls -la *.img *.bin *.tar.gz *.tar 2>/dev/null || true
+        else
+          echo "files_exist=false" >> $GITHUB_OUTPUT
+          echo "status=failure" >> $GITHUB_OUTPUT
+          echo "No firmware files found in $PWD" >&2
+          ls -la >&2
+        fi
 
     - name: Upload firmware directory
       uses: actions/upload-artifact@main
       if: steps.organize.outputs.status == 'success' && !cancelled()
       with:
-        name: OpenWrt_firmware${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
+        name: OpenWrt_firmware${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}  # 修正：使用 FILE_DATE 而不是 FIRMWARE_DATE
         path: ${{ env.FIRMWARE }}
 
     - name: Generate release tag
       id: tag
-      if: env.UPLOAD_RELEASE == 'true' && !cancelled()
+      if: steps.organize.outputs.files_exist == 'true' && env.UPLOAD_RELEASE == 'true' && !cancelled()
       run: |
         echo "release_tag=HI5962-NoWiFi-$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_OUTPUT
         touch release.txt
@@ -178,7 +189,7 @@ jobs:
 
     - name: Upload firmware to release
       uses: softprops/action-gh-release@v1
-      if: steps.tag.outputs.status == 'success' && !cancelled()
+      if: steps.tag.outputs.status == 'success' && steps.organize.outputs.files_exist == 'true' && !cancelled()
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
@@ -194,7 +205,7 @@ jobs:
 
     - name: Remove old Releases
       uses: dev-drprasad/delete-older-releases@v0.2.1
-      if: env.UPLOAD_RELEASE == 'true' && !cancelled()
+      if: steps.organize.outputs.files_exist == 'true' && env.UPLOAD_RELEASE == 'true' && !cancelled()
       with:
         keep_latest: 5
         delete_tags: true
