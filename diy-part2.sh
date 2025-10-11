@@ -16,8 +16,11 @@ rm -rf feeds/packages/lang/golang
 git clone https://github.com/sbwml/packages_lang_golang -b 25.x feeds/packages/lang/golang
 
 
-# 启用的话添加到config      luci-theme-infinityfreedom-ng=y
-# git clone https://github.com/xiaoqingfengATGH/luci-theme-infinityfreedom ./package/luci-theme-infinityfreedom-ng
+
+git clone https://github.com/lwb1978/openwrt-gecoosac ./package/openwrt-gecoosac
+git clone https://github.com/zzsj0928/luci-app-pushbot ./package/luci-app-pushbot
+git clone https://github.com/sirpdboy/luci-app-lucky ./package/luci-app-lucky
+
 
 #git clone --depth 1 https://github.com/xiaorouji/openwrt-passwall-packages.git pw-dependencies
 #git clone --depth 1 https://github.com/xiaorouji/openwrt-passwall.git && mv openwrt-passwall/luci-app-passwall ./ && rm -rf openwrt-passwall
