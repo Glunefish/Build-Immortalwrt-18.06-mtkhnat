@@ -12,7 +12,7 @@
 
 rm -rf ./feeds/packages/net/adguardhome
 git clone -b master --single-branch --depth=1 https://github.com/coolsnowwolf/packages ./ledepackage
-mv ./ledepackage/packages/net/adguardhome ./feeds/packages/net/adguardhome
+mv ./ledepackage/net/adguardhome ./feeds/packages/net/adguardhome
 rm -rf ./ledepackage
 
 
@@ -20,10 +20,11 @@ rm -rf feeds/packages/lang/golang
 git clone https://github.com/sbwml/packages_lang_golang -b 25.x feeds/packages/lang/golang
 
 
-
+git clone https://github.com/GruntFish/luci-app-adguardhome ./package/luci-app-adguardhome
 git clone https://github.com/lwb1978/openwrt-gecoosac ./package/openwrt-gecoosac
 git clone https://github.com/zzsj0928/luci-app-pushbot ./package/luci-app-pushbot
 git clone https://github.com/sirpdboy/luci-app-lucky ./package/luci-app-lucky
+
 
 
 #git clone --depth 1 https://github.com/xiaorouji/openwrt-passwall-packages.git pw-dependencies
