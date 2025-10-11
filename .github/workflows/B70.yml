@@ -95,7 +95,7 @@ jobs:
     - name: Update feeds
       run: cd openwrt && ./scripts/feeds update -a
 
-    - name: Load Script
+    - name: Load DIY Scripts
       run: |
         chmod +x $DIY_P2_SH
         cd openwrt
