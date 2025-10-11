@@ -6,11 +6,6 @@ on:
     types:
       - completed
       
-  # 定时执行：每周三零点执行
-  schedule:
-    - cron: '0 0 * * 3'
-  
-  # 手动触发
   workflow_dispatch:
     inputs:
       keep_releases:
@@ -29,18 +24,15 @@ permissions:
 jobs:
   cleanup:
     runs-on: ubuntu-latest
-    # 重要：避免递归触发 - 如果是由Auto-Clean触发的就跳过
     if: >
       github.event.workflow_run.name != 'Auto-Clean' || 
       github.event_name == 'schedule' || 
       github.event_name == 'workflow_dispatch'
     steps:
-      # 步骤1: 清理旧的Releases
       - name: Cleanup Old Releases
         uses: actions/github-script@v7
         with:
           script: |
-            // 处理不同事件的输入参数
             const keepReleases = context.eventName === 'workflow_dispatch' 
               ? parseInt('${{ inputs.keep_releases }}') 
               : 6;
@@ -77,7 +69,6 @@ jobs:
             }
             console.log(`✅ Releases清理完成: 删除了 ${deletedReleases} 个`);
 
-      # 步骤2: 清理工作流运行记录（完全删除Auto-Clean记录）
       - name: Cleanup Workflow Runs
         uses: actions/github-script@v7
         with:
@@ -94,7 +85,6 @@ jobs:
               per_page: 100
             });
 
-            // 分离Auto-Clean和其他工作流
             const autoCleanRuns = workflows.data.workflow_runs.filter(run => 
               run.name === 'Auto-Clean'
             );
@@ -106,7 +96,6 @@ jobs:
             console.log(`📊 找到 ${autoCleanRuns.length} 个Auto-Clean运行记录`);
             console.log(`📊 找到 ${otherWorkflowRuns.length} 个其他工作流运行记录`);
 
-            // 对其他工作流排序并保留指定数量
             const sortedOtherWorkflows = otherWorkflowRuns.sort((a, b) => 
               new Date(b.created_at) - new Date(a.created_at)
             );
@@ -127,7 +116,6 @@ jobs:
               }
             }
 
-            // 删除所有Auto-Clean运行记录（包括当前运行的除外）
             let deletedAutoClean = 0;
             for (const run of autoCleanRuns) {
               if (run.id === ${{ github.run_id }}) {
