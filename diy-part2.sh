@@ -10,7 +10,11 @@
 # Description: OpenWrt DIY script part 2 (After Update feeds)
 #
 
-rm -rf feeds/packages/net/adguardhome
+rm -rf ./feeds/packages/net/adguardhome
+git clone -b master --single-branch --depth=1 https://github.com/coolsnowwolf/packages ./ledepackage
+mv ./ledepackage/packages/net/adguardhome ./feeds/packages/net/adguardhome
+rm -rf ./ledepackage
+
 
 rm -rf feeds/packages/lang/golang
 git clone https://github.com/sbwml/packages_lang_golang -b 25.x feeds/packages/lang/golang
