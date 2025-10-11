@@ -12,7 +12,7 @@
 
 rm -rf ./feeds/packages/net/adguardhome
 git clone -b master --single-branch --depth=1 https://github.com/coolsnowwolf/packages ./ledepackage
-sed -i 's|include \.\./\.\./lang/golang/golang-package\.mk|include \$(TOPDIR)/lang/golang/golang-package.mk|g' ./ledepackage/net/adguardhome/Makefile
+sed -i 's|include \.\./\.\./lang/golang/golang-package\.mk|include \$(TOPDIR)/feeds/packages/lang/golang/golang-package.mk|g' ./ledepackage/net/adguardhome/Makefile
 mv ./ledepackage/net/adguardhome ./feeds/packages/net/adguardhome
 rm -rf ./ledepackage
 
