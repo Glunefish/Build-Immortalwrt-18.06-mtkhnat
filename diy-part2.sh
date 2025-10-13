@@ -16,11 +16,11 @@ git clone https://github.com/sbwml/packages_lang_golang -b 25.x feeds/packages/l
 rm -rf ./feeds/packages/net/adguardhome
 git clone https://github.com/GruntFish/openwrt-adguardhome ./package/openwrt-adguardhome 
 
+git clone https://github.com/sirpdboy/luci-app-lucky ./package/luci-app-lucky
+sed -i 's/PKG_VERSION:=2.17.8/PKG_VERSION:=2.19.5/g' ./package/luci-app-lucky/lucky/Makefile
+
 git clone https://github.com/lwb1978/openwrt-gecoosac ./package/openwrt-gecoosac
 git clone https://github.com/zzsj0928/luci-app-pushbot ./package/luci-app-pushbot
-git clone https://github.com/sirpdboy/luci-app-lucky ./package/luci-app-lucky
-
-
 
 #git clone --depth 1 https://github.com/xiaorouji/openwrt-passwall-packages.git pw-dependencies
 #git clone --depth 1 https://github.com/xiaorouji/openwrt-passwall.git && mv openwrt-passwall/luci-app-passwall ./ && rm -rf openwrt-passwall
