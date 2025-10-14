@@ -33,6 +33,19 @@ else
     echo "⚠ IP addresses not provided, using defaults"
 fi
 
-sed -i 's|0x2B2|0x312|' target/linux/ramips/patches-5.10/322-mt7621-fix-cpu-clk-add-clkdev.patch
+PATCH_FILE="target/linux/ramips/patches-5.10/322-mt7621-fix-cpu-clk-add-clkdev.patch"
+if [ -f "$PATCH_FILE" ]; then
+    echo "Modifying mt7621 patch file: $PATCH_FILE"
+    if sed -i 's|0x2B2|0x312|' "$PATCH_FILE"; then
+        echo "✓ mt7621 patch modified successfully"
+    else
+        echo "✗ Failed to modify mt7621 patch"
+    fi
+else
+    echo "⚠ Patch file not found: $PATCH_FILE"
+    echo "Available patch files in target/linux/ramips/patches-5.10/:"
+    ls -la target/linux/ramips/patches-5.10/ 2>/dev/null || echo "Directory does not exist"
+fi
+
 
 sed -i 's|set luci.main.mediaurlbase=/luci-static/bootstrap|set luci.main.mediaurlbase=/luci-static/infinityfreedom|' feeds/luci/themes/luci-theme-bootstrap/root/etc/uci-defaults/30_luci-theme-bootstrap
