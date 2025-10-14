@@ -10,10 +10,7 @@
 # Description: OpenWrt DIY script part 2 (After Update feeds)
 #
 
-#git clone -b Packages --single-branch --depth 1 https://github.com/GruntFish/GPackages package/GPackages
-
 rm -rf feeds/packages/net/adguardhome
-mv GPackages/openwrt-adguardhome/adguardhome feeds/packages/net/adguardhome
 
 rm -rf feeds/packages/lang/golang
 git clone -b 25.x --single-branch --depth 1 https://github.com/GruntFish/packages_lang_golang feeds/packages/lang/golang
