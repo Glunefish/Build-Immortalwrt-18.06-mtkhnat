@@ -2,7 +2,7 @@ name: Auto-Clean
 
 on:
   workflow_run:
-    workflows: ["B70"]  # ✅ 只保留实际存在的工作流名称,可监控多个流["1","2",...]
+    workflows: ["B70","B70-1"]  # ✅ 只保留实际存在的工作流名称,可监控多个流["1","2",...]
     types:
       - completed
       
