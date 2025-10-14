@@ -10,12 +10,10 @@
 # Description: OpenWrt DIY script part 2 (After Update feeds)
 #
 
+git clone -b GPackages --single-branch --depth 1 https://github.com/GruntFish/GPackages
+
+rm -rf feeds/packages/net/adguardhome
+mv GPackages/openwrt-adguardhome/adguardhome feeds/packages/net/adguardhome
+
 rm -rf feeds/packages/lang/golang
-git clone -b 25.x --single-branch --depth 1 https://github.com/sbwml/packages_lang_golang feeds/packages/lang/golang
-
-rm -rf ./feeds/packages/net/adguardhome
-git clone -b Packages --single-branch --depth 1 https://github.com/GruntFish/GPackages
-
-#git clone --depth 1 https://github.com/xiaorouji/openwrt-passwall-packages.git pw-dependencies
-#git clone --depth 1 https://github.com/xiaorouji/openwrt-passwall.git && mv openwrt-passwall/luci-app-passwall ./ && rm -rf openwrt-passwall
-#git clone --depth 1 https://github.com/xiaorouji/openwrt-passwall2.git && mv openwrt-passwall2/luci-app-passwall2 ./ && rm -rf openwrt-passwall2
+git clone -b 25.x --single-branch --depth 1 https://github.com/GruntFish/packages_lang_golang feeds/packages/lang/golang
