@@ -12,7 +12,7 @@ on:
       root_password:
         description: 'Root password (will be hashed)'
         required: false
-        default: 'admin'
+        default: 'admin.123'
         type: string
       original_ip:
         description: 'Original IP to be replaced'
