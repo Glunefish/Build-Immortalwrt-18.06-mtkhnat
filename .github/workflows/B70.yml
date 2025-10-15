@@ -1,4 +1,4 @@
-name: B70-1
+name: B70
 
 on:
   repository_dispatch:
