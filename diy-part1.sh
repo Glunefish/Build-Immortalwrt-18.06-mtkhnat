@@ -14,4 +14,4 @@
 # echo 'src-git full https://github.com/immortalwrt/packages.git;openwrt-23.05' >> feeds.conf.default
 # echo 'src-git luci https://github.com/immortalwrt/luci.git;openwrt-23.05' >> feeds.conf.default
 
-sed -i '1i src-git GPackages https://github.com/GruntFish/GPackages.git;main' feeds.conf.default
+sed -i '1i src-git GPackages https://github.com/GruntFish/GPackages.git;Packages' feeds.conf.default
