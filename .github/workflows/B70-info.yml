@@ -283,9 +283,15 @@ jobs:
 
     - name: Create release first (fast)
       if: steps.organize.outputs.files_exist == 'true' && env.UPLOAD_RELEASE == 'true' && !cancelled()
+      run: |
+        RELEASE_TAG="HI5962-NOWIFI"
+        echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
+
+    - name: Create release
+      if: steps.organize.outputs.files_exist == 'true' && env.UPLOAD_RELEASE == 'true' && !cancelled()
       uses: softprops/action-gh-release@v1
       with:
-        tag_name: HI5962-$(date +%Y%m%d%H%M)
+        tag_name: ${{ env.RELEASE_TAG }}
         body: |
           🚀 固件编译完成
           📥 可立即下载使用
@@ -305,7 +311,7 @@ jobs:
     - name: Update release with full info
       if: always() && steps.organize.outputs.files_exist == 'true'
       run: |
-        LATEST_TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
+        LATEST_TAG="${{ env.RELEASE_TAG }}"
         
         {
           echo "## 🚀 OpenWrt 固件发布"
