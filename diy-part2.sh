@@ -11,7 +11,12 @@
 #
 
 rm -rf feeds/packages/net/adguardhome
+
 rm -rf feeds/luci/applications/luci-app-passwall
+
+rm -rf package/network/services/miniupnpd/
+rm -rf package/feeds/luci/applications/luci-app-upnp/
+rm -rf package/feeds/packages/miniupnpc/  
 
 rm -rf feeds/packages/lang/golang
 git clone -b 25.x --single-branch --depth 1 https://github.com/GruntFish/packages_lang_golang feeds/packages/lang/golang
