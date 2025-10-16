@@ -311,39 +311,37 @@ jobs:
       run: |
         echo "release_tag=HI5962-NoWiFi-$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_OUTPUT
         
-        # 安全地处理密码显示（用星号隐藏）
+        # 获取密码和IP
         ROOT_PASSWORD="${{ github.event.inputs.root_password }}"
-        MASKED_PASSWORD="$(echo "$ROOT_PASSWORD" | sed 's/./*/g')"
         NEW_IP="${{ github.event.inputs.new_ip }}"
-        CURRENT_TIME=$(date +"%Y-%m-%d %H:%M:%S")
-        DEVICE_NAME=$(cat openwrt/DEVICE_NAME 2>/dev/null || echo "Unknown")
-        TARGET_ARCH=$(grep '^CONFIG_TARGET_ARCH_PACKAGES=' openwrt/.config 2>/dev/null | cut -d'"' -f2 || echo "Unknown")
-        KERNEL_VERSION=$(grep '^LINUX_VERSION=' openwrt/include/kernel-version.mk 2>/dev/null | cut -d'=' -f2 | tr -d ' ' || echo "Unknown")
         
-        # 生成完整的 release 信息
-        cat > $GITHUB_WORKSPACE/release_info.md << EOF
-# 🚀 OpenWrt 固件发布
+        # 用echo生成release信息
+        echo "# 🚀 OpenWrt 固件发布" > $GITHUB_WORKSPACE/release_info.md
+        echo "" >> $GITHUB_WORKSPACE/release_info.md
+        echo "**编译时间**: $(date +"%Y-%m-%d %H:%M:%S")" >> $GITHUB_WORKSPACE/release_info.md
+        echo "**设备型号**: $(cat openwrt/DEVICE_NAME 2>/dev/null || echo "Unknown")" >> $GITHUB_WORKSPACE/release_info.md
+        echo "" >> $GITHUB_WORKSPACE/release_info.md
+        echo "## 固件信息" >> $GITHUB_WORKSPACE/release_info.md
+        echo "- **架构**: $(grep '^CONFIG_TARGET_ARCH_PACKAGES=' openwrt/.config 2>/dev/null | cut -d'"' -f2 || echo "Unknown")" >> $GITHUB_WORKSPACE/release_info.md
+        echo "- **内核版本**: $(grep '^LINUX_VERSION=' openwrt/include/kernel-version.mk 2>/dev/null | cut -d'=' -f2 | tr -d ' ' || echo "Unknown")" >> $GITHUB_WORKSPACE/release_info.md
+        echo "- **管理地址**: $NEW_IP" >> $GITHUB_WORKSPACE/release_info.md
+        echo "- **root密码**: $ROOT_PASSWORD" >> $GITHUB_WORKSPACE/release_info.md
+        echo "" >> $GITHUB_WORKSPACE/release_info.md
         
-**编译时间**: $CURRENT_TIME
-**设备型号**: $DEVICE_NAME
+        # 添加包报告
+        if [ -f $GITHUB_WORKSPACE/package_report.md ]; then
+          cat $GITHUB_WORKSPACE/package_report.md >> $GITHUB_WORKSPACE/release_info.md
+        fi
         
-## 固件信息
-- **架构**: $TARGET_ARCH
-- **内核版本**: $KERNEL_VERSION
-- **管理地址**: $NEW_IP
-- **root密码**: $MASKED_PASSWORD
-        
-$(cat $GITHUB_WORKSPACE/package_report.md)
-        
-## 刷机说明
-1. 选择合适的固件文件进行刷机
-2. 首次启动请耐心等待系统初始化
-3. 默认管理地址: $NEW_IP
-4. 用户名: root
-5. 密码: 请查看编译时的输入参数或使用默认密码
-        
-> ⚠️ 注意：刷机有风险，请确保备份重要数据
-> 🔒 安全提示：首次登录后请立即修改默认密码
-EOF
+        # 添加刷机说明
+        echo "" >> $GITHUB_WORKSPACE/release_info.md
+        echo "## 刷机说明" >> $GITHUB_WORKSPACE/release_info.md
+        echo "1. 选择合适的固件文件进行刷机" >> $GITHUB_WORKSPACE/release_info.md
+        echo "2. 首次启动请耐心等待系统初始化" >> $GITHUB_WORKSPACE/release_info.md
+        echo "3. 默认管理地址: $NEW_IP" >> $GITHUB_WORKSPACE/release_info.md
+        echo "4. 用户名: root" >> $GITHUB_WORKSPACE/release_info.md
+        echo "5. 密码: $ROOT_PASSWORD" >> $GITHUB_WORKSPACE/release_info.md
+        echo "" >> $GITHUB_WORKSPACE/release_info.md
+        echo "> ⚠️ 注意：刷机有风险，请确保备份重要数据" >> $GITHUB_WORKSPACE/release_info.md
         
         echo "status=success" >> $GITHUB_OUTPUT
