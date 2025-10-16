@@ -315,17 +315,21 @@ jobs:
         ROOT_PASSWORD="${{ github.event.inputs.root_password }}"
         MASKED_PASSWORD="$(echo "$ROOT_PASSWORD" | sed 's/./*/g')"
         NEW_IP="${{ github.event.inputs.new_ip }}"
+        CURRENT_TIME=$(date +"%Y-%m-%d %H:%M:%S")
+        DEVICE_NAME=$(cat openwrt/DEVICE_NAME 2>/dev/null || echo "Unknown")
+        TARGET_ARCH=$(grep '^CONFIG_TARGET_ARCH_PACKAGES=' openwrt/.config 2>/dev/null | cut -d'"' -f2 || echo "Unknown")
+        KERNEL_VERSION=$(grep '^LINUX_VERSION=' openwrt/include/kernel-version.mk 2>/dev/null | cut -d'=' -f2 | tr -d ' ' || echo "Unknown")
         
         # 生成完整的 release 信息
         cat > $GITHUB_WORKSPACE/release_info.md << EOF
 # 🚀 OpenWrt 固件发布
         
-**编译时间**: $(date +"%Y-%m-%d %H:%M:%S")
-**设备型号**: $(cat openwrt/DEVICE_NAME 2>/dev/null || echo "Unknown")
+**编译时间**: $CURRENT_TIME
+**设备型号**: $DEVICE_NAME
         
 ## 固件信息
-- **架构**: $(grep '^CONFIG_TARGET_ARCH_PACKAGES=' openwrt/.config 2>/dev/null | cut -d'"' -f2 || echo "Unknown")
-- **内核版本**: $(grep '^LINUX_VERSION=' openwrt/include/kernel-version.mk 2>/dev/null | cut -d'=' -f2 | tr -d ' ' || echo "Unknown")
+- **架构**: $TARGET_ARCH
+- **内核版本**: $KERNEL_VERSION
 - **管理地址**: $NEW_IP
 - **root密码**: $MASKED_PASSWORD
         
