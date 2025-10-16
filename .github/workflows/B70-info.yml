@@ -298,49 +298,44 @@ jobs:
           ls -la >&2
         fi
 
-    - name: Generate release tag and info
-      id: tag
+    - name: Create release first (fast)
       if: steps.organize.outputs.files_exist == 'true' && env.UPLOAD_RELEASE == 'true' && !cancelled()
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: HI5962-$(date +%Y%m%d%H%M)
+        body: |
+          🚀 固件编译完成
+          📥 可立即下载使用
+          🔧 详细信息更新中...
+        files: ${{ env.FIRMWARE }}/*
+
+    - name: Install GitHub CLI
+      if: always() && steps.organize.outputs.files_exist == 'true'
       run: |
-        echo "release_tag=HI5962-NoWiFi-$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_OUTPUT
-        
-        ROOT_PASSWORD="${{ github.event.inputs.root_password }}"
-        NEW_IP="${{ github.event.inputs.new_ip }}"
-        CURRENT_TIME=$(date +"%Y-%m-%d %H:%M:%S")
-        DEVICE_NAME=$(cat openwrt/DEVICE_NAME 2>/dev/null || echo "Unknown")
-        TARGET_ARCH=$(grep '^CONFIG_TARGET_ARCH_PACKAGES=' openwrt/.config 2>/dev/null | cut -d'"' -f2 || echo "Unknown")
-        KERNEL_VERSION=$(grep '^LINUX_VERSION=' openwrt/include/kernel-version.mk 2>/dev/null | cut -d'=' -f2 | tr -d ' ' || echo "Unknown")
+        type -p curl >/dev/null || (sudo apt update && sudo apt install curl -y)
+        curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
+        && sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
+        && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+        && sudo apt update \
+        && sudo apt install gh -y
+
+    - name: Update release with full info
+      if: always() && steps.organize.outputs.files_exist == 'true'
+      run: |
+        LATEST_TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
         
         {
-          echo "# 🚀 OpenWrt 固件发布"
+          echo "## 🚀 OpenWrt 固件发布"
           echo ""
-          echo "**编译时间**: $CURRENT_TIME"
-          echo "**设备型号**: $DEVICE_NAME"
+          echo "**管理地址**: ${{ github.event.inputs.new_ip }}"
+          echo "**root密码**: ${{ github.event.inputs.root_password }}"
           echo ""
-          echo "## 固件信息"
-          echo "- **架构**: $TARGET_ARCH"
-          echo "- **内核版本**: $KERNEL_VERSION"
-          echo "- **管理地址**: $NEW_IP"
-          echo "- **root密码**: $ROOT_PASSWORD"
-          echo ""
-        } > release_body.txt
-
+        } > full_info.md
+        
         if [ -f $GITHUB_WORKSPACE/package_report.md ]; then
-          cat $GITHUB_WORKSPACE/package_report.md >> release_body.txt
+          cat $GITHUB_WORKSPACE/package_report.md >> full_info.md
         fi
-
-        {
-          echo ""
-          echo "## 刷机说明"
-          echo "1. 选择合适的固件文件进行刷机"
-          echo "2. 首次启动请耐心等待系统初始化"
-          echo "3. 默认管理地址: $NEW_IP"
-          echo "4. 用户名: root"
-          echo "5. 密码: $ROOT_PASSWORD"
-          echo ""
-          echo "> ⚠️ 注意：刷机有风险，请确保备份重要数据"
-        } >> release_body.txt
-
-        BODY_CONTENT=$(cat release_body.txt)
-        echo "body=$BODY_CONTENT" >> $GITHUB_OUTPUT
-        echo "status=success" >> $GITHUB_OUTPUT
+        
+        gh release edit "$LATEST_TAG" --notes-file full_info.md || echo "信息更新失败，但不影响固件下载"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
