@@ -11,7 +11,6 @@
 #
 
 rm -rf feeds/packages/net/adguardhome
-
 rm -rf feeds/luci/applications/luci-app-passwall
 
 rm -rf feeds/packages/lang/golang
