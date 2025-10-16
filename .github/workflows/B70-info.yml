@@ -311,6 +311,11 @@ jobs:
       run: |
         echo "release_tag=HI5962-NoWiFi-$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_OUTPUT
         
+        # 安全地处理密码显示（用星号隐藏）
+        ROOT_PASSWORD="${{ github.event.inputs.root_password }}"
+        MASKED_PASSWORD="$(echo "$ROOT_PASSWORD" | sed 's/./*/g')"
+        NEW_IP="${{ github.event.inputs.new_ip }}"
+        
         # 生成完整的 release 信息
         cat > $GITHUB_WORKSPACE/release_info.md << EOF
 # 🚀 OpenWrt 固件发布
@@ -321,42 +326,20 @@ jobs:
 ## 固件信息
 - **架构**: $(grep '^CONFIG_TARGET_ARCH_PACKAGES=' openwrt/.config 2>/dev/null | cut -d'"' -f2 || echo "Unknown")
 - **内核版本**: $(grep '^LINUX_VERSION=' openwrt/include/kernel-version.mk 2>/dev/null | cut -d'=' -f2 | tr -d ' ' || echo "Unknown")
+- **管理地址**: $NEW_IP
+- **root密码**: $MASKED_PASSWORD
         
 $(cat $GITHUB_WORKSPACE/package_report.md)
         
 ## 刷机说明
 1. 选择合适的固件文件进行刷机
 2. 首次启动请耐心等待系统初始化
-3. 默认管理地址: ${{ github.event.inputs.new_ip }}
+3. 默认管理地址: $NEW_IP
 4. 用户名: root
-5. 密码: ${{ github.event.inputs.root_password }}
+5. 密码: 请查看编译时的输入参数或使用默认密码
         
 > ⚠️ 注意：刷机有风险，请确保备份重要数据
+> 🔒 安全提示：首次登录后请立即修改默认密码
 EOF
         
         echo "status=success" >> $GITHUB_OUTPUT
-
-    - name: Upload firmware to release
-      uses: softprops/action-gh-release@v1
-      if: steps.tag.outputs.status == 'success' && steps.organize.outputs.files_exist == 'true' && !cancelled()
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ steps.tag.outputs.release_tag }}
-        body_path: $GITHUB_WORKSPACE/release_info.md
-        files: ${{ env.FIRMWARE }}/*
-
-    - name: Delete workflow runs
-      uses: Mattraks/delete-workflow-runs@main
-      with:
-        retain_days: 1
-        keep_minimum_runs: 3
-
-    - name: Remove old Releases
-      uses: dev-drprasad/delete-older-releases@v0.2.1
-      if: steps.organize.outputs.files_exist == 'true' && env.UPLOAD_RELEASE == 'true' && !cancelled()
-      with:
-        keep_latest: 5
-        delete_tags: true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
