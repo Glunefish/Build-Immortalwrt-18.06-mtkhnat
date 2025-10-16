@@ -311,37 +311,60 @@ jobs:
       run: |
         echo "release_tag=HI5962-NoWiFi-$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_OUTPUT
         
-        # 获取密码和IP
         ROOT_PASSWORD="${{ github.event.inputs.root_password }}"
         NEW_IP="${{ github.event.inputs.new_ip }}"
         
-        # 用echo生成release信息
-        echo "# 🚀 OpenWrt 固件发布" > $GITHUB_WORKSPACE/release_info.md
-        echo "" >> $GITHUB_WORKSPACE/release_info.md
-        echo "**编译时间**: $(date +"%Y-%m-%d %H:%M:%S")" >> $GITHUB_WORKSPACE/release_info.md
-        echo "**设备型号**: $(cat openwrt/DEVICE_NAME 2>/dev/null || echo "Unknown")" >> $GITHUB_WORKSPACE/release_info.md
-        echo "" >> $GITHUB_WORKSPACE/release_info.md
-        echo "## 固件信息" >> $GITHUB_WORKSPACE/release_info.md
-        echo "- **架构**: $(grep '^CONFIG_TARGET_ARCH_PACKAGES=' openwrt/.config 2>/dev/null | cut -d'"' -f2 || echo "Unknown")" >> $GITHUB_WORKSPACE/release_info.md
-        echo "- **内核版本**: $(grep '^LINUX_VERSION=' openwrt/include/kernel-version.mk 2>/dev/null | cut -d'=' -f2 | tr -d ' ' || echo "Unknown")" >> $GITHUB_WORKSPACE/release_info.md
-        echo "- **管理地址**: $NEW_IP" >> $GITHUB_WORKSPACE/release_info.md
-        echo "- **root密码**: $ROOT_PASSWORD" >> $GITHUB_WORKSPACE/release_info.md
-        echo "" >> $GITHUB_WORKSPACE/release_info.md
+        RELEASE_BODY="# 🚀 OpenWrt 固件发布
+
+    - name: Generate release tag and info
+      id: tag
+      if: steps.organize.outputs.files_exist == 'true' && env.UPLOAD_RELEASE == 'true' && !cancelled()
+      run: |
+        echo "release_tag=HI5962-NoWiFi-$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_OUTPUT
         
-        # 添加包报告
+        ROOT_PASSWORD="${{ github.event.inputs.root_password }}"
+        NEW_IP="${{ github.event.inputs.new_ip }}"
+        
+        RELEASE_BODY="# 🚀 OpenWrt 固件发布
+
+**编译时间**: $(date +"%Y-%m-%d %H:%M:%S")
+**设备型号**: $(cat openwrt/DEVICE_NAME 2>/dev/null || echo "Unknown")
+
+## 固件信息
+- **架构**: $(grep '^CONFIG_TARGET_ARCH_PACKAGES=' openwrt/.config 2>/dev/null | cut -d'"' -f2 || echo "Unknown")
+- **内核版本**: $(grep '^LINUX_VERSION=' openwrt/include/kernel-version.mk 2>/dev/null | cut -d'=' -f2 | tr -d ' ' || echo "Unknown")
+- **管理地址**: $NEW_IP
+- **root密码**: $ROOT_PASSWORD
+
+"
+
         if [ -f $GITHUB_WORKSPACE/package_report.md ]; then
-          cat $GITHUB_WORKSPACE/package_report.md >> $GITHUB_WORKSPACE/release_info.md
+          PACKAGE_CONTENT=$(cat $GITHUB_WORKSPACE/package_report.md)
+          RELEASE_BODY="${RELEASE_BODY}${PACKAGE_CONTENT}
+"
         fi
-        
-        # 添加刷机说明
-        echo "" >> $GITHUB_WORKSPACE/release_info.md
-        echo "## 刷机说明" >> $GITHUB_WORKSPACE/release_info.md
-        echo "1. 选择合适的固件文件进行刷机" >> $GITHUB_WORKSPACE/release_info.md
-        echo "2. 首次启动请耐心等待系统初始化" >> $GITHUB_WORKSPACE/release_info.md
-        echo "3. 默认管理地址: $NEW_IP" >> $GITHUB_WORKSPACE/release_info.md
-        echo "4. 用户名: root" >> $GITHUB_WORKSPACE/release_info.md
-        echo "5. 密码: $ROOT_PASSWORD" >> $GITHUB_WORKSPACE/release_info.md
-        echo "" >> $GITHUB_WORKSPACE/release_info.md
-        echo "> ⚠️ 注意：刷机有风险，请确保备份重要数据" >> $GITHUB_WORKSPACE/release_info.md
-        
+
+        RELEASE_BODY="${RELEASE_BODY}
+## 刷机说明
+1. 选择合适的固件文件进行刷机
+2. 首次启动请耐心等待系统初始化
+3. 默认管理地址: $NEW_IP
+4. 用户名: root
+5. 密码: $ROOT_PASSWORD
+
+> ⚠️ 注意：刷机有风险，请确保备份重要数据"
+
+        echo "body<<EOF" >> $GITHUB_OUTPUT
+        echo "$RELEASE_BODY" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
         echo "status=success" >> $GITHUB_OUTPUT
+
+    - name: Upload firmware to release
+      uses: softprops/action-gh-release@v1
+      if: steps.tag.outputs.status == 'success' && steps.organize.outputs.files_exist == 'true' && !cancelled()
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.tag.outputs.release_tag }}
+        body: ${{ steps.tag.outputs.body }}
+        files: ${{ env.FIRMWARE }}/*
