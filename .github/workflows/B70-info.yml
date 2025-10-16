@@ -191,58 +191,41 @@ jobs:
         echo "| 类别 | 插件名称 | 版本 | 状态 |" >> $GITHUB_WORKSPACE/package_report.md
         echo "|------|----------|------|------|" >> $GITHUB_WORKSPACE/package_report.md
         
-        # 提取已启用的包信息
+        # 提取所有已启用的包信息
         if [ -f .config ]; then
-          # 网络相关插件
-          for pkg in luci-app-passwall luci-app-ssr-plus luci-app-vssr luci-app-openclash luci-app-bypass \
-                     luci-app-turboacc luci-app-flowoffload luci-app-sfe luci-app-nft-qos \
-                     luci-app-qos luci-app-bandwidthd luci-app-wol luci-app-upnp \
-                     luci-app-ddns luci-app-frpc luci-app-frps luci-app-wireguard \
-                     luci-app-zerotier luci-app-tinyproxy luci-app-https-dns-proxy; do
-            if grep -q "CONFIG_PACKAGE_${pkg}=y" .config; then
-              pkg_name=$(echo $pkg | sed 's/luci-app-//')
-              version=$(find package/feeds -name "$pkg" -type d 2>/dev/null | head -1 | xargs grep 'PKG_VERSION:=' 2>/dev/null | cut -d'=' -f2 | head -1 || echo "default")
-              echo "| 网络 | $pkg_name | $version | ✅ 已启用 |" >> $GITHUB_WORKSPACE/package_report.md
+          # 检测所有 Luci 应用
+          echo "正在检测 Luci 应用..."
+          for pkg in $(grep '^CONFIG_PACKAGE_luci' .config | grep '=y' | cut -d'=' -f1 | sed 's/CONFIG_PACKAGE_//'); do
+            pkg_name=$(echo $pkg | sed 's/luci-app-//;s/luci-theme-//')
+            pkg_type="未知"
+            
+            if [[ $pkg == luci-app-* ]] && [[ $pkg != luci-i18n-* ]]; then
+              pkg_type="应用"
+              # 从 Makefile 获取版本信息
+              version=$(find . -name "Makefile" -exec grep -l "PKG_NAME.*$pkg" {} \; 2>/dev/null | head -1 | xargs grep "PKG_VERSION" 2>/dev/null | head -1 | cut -d'=' -f2 | tr -d ' ' || echo "")
+              if [ -z "$version" ]; then
+                version=$(find package -name "$pkg" -type d 2>/dev/null | head -1 | xargs grep "PKG_VERSION" 2>/dev/null | head -1 | cut -d'=' -f2 | tr -d ' ' || echo "未知")
+              fi
+              echo "| $pkg_type | $pkg_name | $version | ✅ 已启用 |" >> $GITHUB_WORKSPACE/package_report.md
+            elif [[ $pkg == luci-theme-* ]]; then
+              pkg_type="主题"
+              version=$(find . -name "Makefile" -exec grep -l "PKG_NAME.*$pkg" {} \; 2>/dev/null | head -1 | xargs grep "PKG_VERSION" 2>/dev/null | head -1 | cut -d'=' -f2 | tr -d ' ' || echo "")
+              if [ -z "$version" ]; then
+                version=$(find package -name "$pkg" -type d 2>/dev/null | head -1 | xargs grep "PKG_VERSION" 2>/dev/null | head -1 | cut -d'=' -f2 | tr -d ' ' || echo "未知")
+              fi
+              echo "| $pkg_type | $pkg_name | $version | ✅ 已启用 |" >> $GITHUB_WORKSPACE/package_report.md
             fi
           done
           
-          # 存储和文件共享
-          for pkg in luci-app-samba4 luci-app-minidlna luci-app-aria2 luci-app-transmission \
-                     luci-app-qbittorrent luci-app-vsftpd luci-app-tftp; do
-            if grep -q "CONFIG_PACKAGE_${pkg}=y" .config; then
-              pkg_name=$(echo $pkg | sed 's/luci-app-//')
-              version=$(find package/feeds -name "$pkg" -type d 2>/dev/null | head -1 | xargs grep 'PKG_VERSION:=' 2>/dev/null | cut -d'=' -f2 | head -1 || echo "default")
-              echo "| 存储 | $pkg_name | $version | ✅ 已启用 |" >> $GITHUB_WORKSPACE/package_report.md
-            fi
-          done
-          
-          # 系统工具
-          for pkg in luci-app-ttyd luci-app-filebrowser luci-app-cpufreq luci-app-ramfree \
-                     luci-app-opkg luci-app-commands luci-app-cifs-mount luci-app-dockerman \
-                     luci-app-docker luci-app-acme luci-app-watchcat luci-app-uhttpd; do
-            if grep -q "CONFIG_PACKAGE_${pkg}=y" .config; then
-              pkg_name=$(echo $pkg | sed 's/luci-app-//')
-              version=$(find package/feeds -name "$pkg" -type d 2>/dev/null | head -1 | xargs grep 'PKG_VERSION:=' 2>/dev/null | cut -d'=' -f2 | head -1 || echo "default")
-              echo "| 系统 | $pkg_name | $version | ✅ 已启用 |" >> $GITHUB_WORKSPACE/package_report.md
-            fi
-          done
-          
-          # 主题和界面
-          for pkg in luci-theme-argon luci-theme-bootstrap luci-theme-material \
-                     luci-theme-openwrt-2020 luci-theme-edge; do
-            if grep -q "CONFIG_PACKAGE_${pkg}=y" .config; then
-              pkg_name=$(echo $pkg | sed 's/luci-theme-//')
-              version=$(find package/feeds -name "$pkg" -type d 2>/dev/null | head -1 | xargs grep 'PKG_VERSION:=' 2>/dev/null | cut -d'=' -f2 | head -1 || echo "default")
-              echo "| 主题 | $pkg_name | $version | ✅ 已启用 |" >> $GITHUB_WORKSPACE/package_report.md
-            fi
-          done
-          
-          # 基础包
-          for pkg in base-files busybox dnsmasq dropbear firewall odhcpd-ipv6only \
-                     opkg procd swconfig uci uhttpd wpad-basic; do
-            if grep -q "CONFIG_PACKAGE_${pkg}=y" .config; then
-              version=$(find package/ -name "$pkg" -type d 2>/dev/null | head -1 | xargs grep 'PKG_VERSION:=' 2>/dev/null | cut -d'=' -f2 | head -1 || echo "default")
-              echo "| 基础 | $pkg | $version | ✅ 已启用 |" >> $GITHUB_WORKSPACE/package_report.md
+          # 检测其他重要包
+          echo "正在检测其他重要包..."
+          for pkg in adblock aria2 transmission samba4 vsftpd ttyd filebrowser dockerman ddns frpc frps wireguard zerotier; do
+            if grep -q "CONFIG_PACKAGE_${pkg}=y" .config || grep -q "CONFIG_PACKAGE_luci-app-${pkg}=y" .config; then
+              version=$(find . -name "Makefile" -exec grep -l "PKG_NAME.*$pkg" {} \; 2>/dev/null | head -1 | xargs grep "PKG_VERSION" 2>/dev/null | head -1 | cut -d'=' -f2 | tr -d ' ' || echo "")
+              if [ -z "$version" ]; then
+                version=$(find package -name "$pkg" -type d 2>/dev/null | head -1 | xargs grep "PKG_VERSION" 2>/dev/null | head -1 | cut -d'=' -f2 | tr -d ' ' || echo "未知")
+              fi
+              echo "| 工具 | $pkg | $version | ✅ 已启用 |" >> $GITHUB_WORKSPACE/package_report.md
             fi
           done
         fi
