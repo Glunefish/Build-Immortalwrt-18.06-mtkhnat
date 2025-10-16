@@ -281,50 +281,51 @@ jobs:
           ls -la >&2
         fi
 
-    - name: Create release first (fast)
-      if: steps.organize.outputs.files_exist == 'true' && env.UPLOAD_RELEASE == 'true' && !cancelled()
-      run: |
-        RELEASE_TAG="HI5962-NOWIFI"
-        echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
+- name: Create Release
+  if: steps.organize.outputs.files_exist == 'true' && env.UPLOAD_RELEASE == 'true' && !cancelled()
+  id: create_release
+  uses: softprops/action-gh-release@v1
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  with:
+    tag_name: "HI5962-${{ github.run_id }}"
+    body: |
+      🚀 固件编译完成
+      📥 可立即下载使用
 
-    - name: Create release
-      if: steps.organize.outputs.files_exist == 'true' && env.UPLOAD_RELEASE == 'true' && !cancelled()
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: ${{ env.RELEASE_TAG }}
-        body: |
-          🚀 固件编译完成
-          📥 可立即下载使用
-          🔧 详细信息更新中...
-        files: ${{ env.FIRMWARE }}/*
+      **管理地址**: ${{ github.event.inputs.new_ip }}
+      **用户名**: root
+      **密码**: ${{ github.event.inputs.root_password }}
 
-    - name: Install GitHub CLI
-      if: always() && steps.organize.outputs.files_exist == 'true'
-      run: |
-        type -p curl >/dev/null || (sudo apt update && sudo apt install curl -y)
-        curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
-        && sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
-        && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
-        && sudo apt update \
-        && sudo apt install gh -y
+      > 🔧 详细的插件列表正在生成中...
+    files: ${{ env.FIRMWARE }}/*
 
-    - name: Update release with full info
-      if: always() && steps.organize.outputs.files_exist == 'true'
-      run: |
-        LATEST_TAG="${{ env.RELEASE_TAG }}"
-        
-        {
-          echo "## 🚀 OpenWrt 固件发布"
-          echo ""
-          echo "**管理地址**: ${{ github.event.inputs.new_ip }}"
-          echo "**root密码**: ${{ github.event.inputs.root_password }}"
-          echo ""
-        } > full_info.md
-        
-        if [ -f $GITHUB_WORKSPACE/package_report.md ]; then
-          cat $GITHUB_WORKSPACE/package_report.md >> full_info.md
-        fi
-        
-        gh release edit "$LATEST_TAG" --notes-file full_info.md || echo "信息更新失败，但不影响固件下载"
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+- name: Update Release with Package Info
+  if: always() && steps.create_release.outputs.status == 'success'
+  run: |
+    # 进入 package_report.md 文件所在目录
+    cd openwrt
+    
+    # 检查文件是否存在
+    if [ -f "package_report.md" ]; then
+      echo "找到 package_report.md，开始更新 Release..."
+      
+      # 创建完整的 Release Body 文件
+      {
+        echo "## 🚀 OpenWrt 固件发布"
+        echo ""
+        echo "**管理地址**: ${{ github.event.inputs.new_ip }}"
+        echo "**root密码**: ${{ github.event.inputs.root_password }}"
+        echo ""
+        cat package_report.md
+      } > ../full_release_body.md
+      
+      # 更新 Release
+      gh release edit "HI5962-${{ github.run_id }}" --notes-file ../full_release_body.md
+      echo "✅ Release 信息已更新"
+    else
+      echo "❌ package_report.md 文件未找到，无法更新详细插件信息"
+      find . -name "package_report.md" 2>/dev/null || echo "在 openwrt 目录下未找到该文件"
+    fi
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
