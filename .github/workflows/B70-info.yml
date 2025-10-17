@@ -161,95 +161,76 @@ jobs:
       if: (!cancelled())
       run: df -hT
 
-    - name: Extract package info and generate report
-      id: package_info
-      if: steps.compile.outputs.status == 'success' && !cancelled()
+    - name: Generate firmware info and release notes
+      id: firmware_info
+      if: steps.organize.outputs.files_exist == 'true' && !cancelled()
       run: |
         cd openwrt
-        # 改为当前目录，不要用 $GITHUB_WORKSPACE
-        echo "## 📦 固件插件和系统功能清单" > package_report.md
-        echo "" >> package_report.md
-        echo "### 系统基本信息" >> package_report.md
-        echo "" >> package_report.md
         
-        # 获取目标系统信息
-        if [ -f .config ]; then
-          TARGET_ARCH=$(grep '^CONFIG_TARGET_ARCH_PACKAGES=' .config | cut -d'"' -f2)
-          TARGET_BOARD=$(grep '^CONFIG_TARGET_BOARD=' .config | cut -d'=' -f2 | tr -d '"')
-          TARGET_SUBTARGET=$(grep '^CONFIG_TARGET_SUBTARGET=' .config | cut -d'=' -f2 | tr -d '"')
-          KERNEL_VERSION=$(grep '^LINUX_VERSION=' include/kernel-version.mk | cut -d'=' -f2 | tr -d ' ')
-          
-          echo "- **架构**: $TARGET_ARCH" >> package_report.md
-          echo "- **目标板**: $TARGET_BOARD" >> package_report.md
-          echo "- **子目标**: $TARGET_SUBTARGET" >> package_report.md
-          echo "- **内核版本**: $KERNEL_VERSION" >> package_report.md
-          echo "- **编译时间**: $(date +"%Y-%m-%d %H:%M:%S")" >> package_report.md
+        # 获取架构信息
+        ARCH=$(grep '^CONFIG_TARGET_ARCH_PACKAGES=' .config | cut -d'=' -f2 | tr -d '"' || echo "mipsel_24kc")
+        TARGET=$(grep '^CONFIG_TARGET_BOARD=' .config | cut -d'=' -f2 | tr -d '"' || echo "ramips")
+        SUBTARGET=$(grep '^CONFIG_TARGET_SUBTARGET=' .config | cut -d'=' -f2 | tr -d '"' || echo "mt7621")
+        
+        # 获取内核版本
+        if [ -f "include/kernel-version.mk" ]; then
+          KERNEL_VER=$(grep '^LINUX_VERSION=' include/kernel-version.mk | cut -d'=' -f2 | tr -d ' ' | head -1)
+        else
+          KERNEL_VER=$(grep '^LINUX_VERSION=' include/kernel.mk | cut -d'=' -f2 | tr -d ' ' | head -1 || echo "未知")
         fi
         
-        echo "" >> package_report.md
-        echo "### 📊 插件配置清单" >> package_report.md
-        echo "" >> package_report.md
-        echo "| 类别 | 插件名称 | 版本 | 状态 |" >> package_report.md
-        echo "|------|----------|------|------|" >> package_report.md
-        
-        # 提取所有已启用的包信息
-        if [ -f .config ]; then
-          # 检测所有 Luci 应用
-          echo "正在检测 Luci 应用..."
-          for pkg in $(grep '^CONFIG_PACKAGE_luci' .config | grep '=y' | cut -d'=' -f1 | sed 's/CONFIG_PACKAGE_//'); do
-            pkg_name=$(echo $pkg | sed 's/luci-app-//;s/luci-theme-//')
-            pkg_type="未知"
-            
-            if [[ $pkg == luci-app-* ]] && [[ $pkg != luci-i18n-* ]]; then
-              pkg_type="应用"
-              # 从 Makefile 获取版本信息
-              version=$(find . -name "Makefile" -exec grep -l "PKG_NAME.*$pkg" {} \; 2>/dev/null | head -1 | xargs grep "PKG_VERSION" 2>/dev/null | head -1 | cut -d'=' -f2 | tr -d ' ' || echo "")
-              if [ -z "$version" ]; then
-                version=$(find package -name "$pkg" -type d 2>/dev/null | head -1 | xargs grep "PKG_VERSION" 2>/dev/null | head -1 | cut -d'=' -f2 | tr -d ' ' || echo "未知")
-              fi
-              echo "| $pkg_type | $pkg_name | $version | ✅ 已启用 |" >> package_report.md
-            elif [[ $pkg == luci-theme-* ]]; then
-              pkg_type="主题"
-              version=$(find . -name "Makefile" -exec grep -l "PKG_NAME.*$pkg" {} \; 2>/dev/null | head -1 | xargs grep "PKG_VERSION" 2>/dev/null | head -1 | cut -d'=' -f2 | tr -d ' ' || echo "")
-              if [ -z "$version" ]; then
-                version=$(find package -name "$pkg" -type d 2>/dev/null | head -1 | xargs grep "PKG_VERSION" 2>/dev/null | head -1 | cut -d'=' -f2 | tr -d ' ' || echo "未知")
-              fi
-              echo "| $pkg_type | $pkg_name | $version | ✅ 已启用 |" >> package_report.md
-            fi
-          done
-          
-          # 检测其他重要包
-          echo "正在检测其他重要包..."
-          for pkg in adblock aria2 transmission samba4 vsftpd ttyd filebrowser dockerman ddns frpc frps wireguard zerotier; do
-            if grep -q "CONFIG_PACKAGE_${pkg}=y" .config || grep -q "CONFIG_PACKAGE_luci-app-${pkg}=y" .config; then
-              version=$(find . -name "Makefile" -exec grep -l "PKG_NAME.*$pkg" {} \; 2>/dev/null | head -1 | xargs grep "PKG_VERSION" 2>/dev/null | head -1 | cut -d'=' -f2 | tr -d ' ' || echo "")
-              if [ -z "$version" ]; then
-                version=$(find package -name "$pkg" -type d 2>/dev/null | head -1 | xargs grep "PKG_VERSION" 2>/dev/null | head -1 | cut -d'=' -f2 | tr -d ' ' || echo "未知")
-              fi
-              echo "| 工具 | $pkg | $version | ✅ 已启用 |" >> package_report.md
-            fi
-          done
-        fi
-        
-        echo "" >> package_report.md
-        echo "### 🔧 内核特性" >> package_report.md
-        echo "" >> package_report.md
-        
-        # 检查内核特性
-        if grep -q "CONFIG_KERNEL_CPU_FREQ=y" .config; then
-          echo "- CPU 频率调节: ✅ 已启用" >> package_report.md
-        fi
-        if grep -q "CONFIG_KERNEL_SWAP=y" .config; then
-          echo "- 交换分区: ✅ 已启用" >> package_report.md
-        fi
-        if grep -q "CONFIG_KERNEL_ZRAM=y" .config; then
-          echo "- ZRAM 压缩内存: ✅ 已启用" >> package_report.md
-        fi
-        
-        # 统计包数量
+        # 获取已启用的包数量
         ENABLED_PACKAGES=$(grep '^CONFIG_PACKAGE_' .config | grep '=y' | wc -l)
-        echo "" >> package_report.md
-        echo "### 📈 编译统计" >> package_report.md
-        echo "- 已启用包数量: $ENABLED_PACKAGES" >> package_report.md
         
-        echo "package_report_generated=true" >> $GITHUB_OUTPUT
+        # 获取编译时间
+        BUILD_TIME=$(date +"%Y-%m-%d %H:%M:%S")
+        
+        # 生成插件清单 - 动态获取所有已启用的包
+        PACKAGE_LIST=""
+        # 获取所有启用的包，并尝试获取版本
+        for pkg in $(grep '^CONFIG_PACKAGE_' .config | grep '=y' | cut -d'=' -f1 | sed 's/CONFIG_PACKAGE_//'); do
+          # 尝试获取版本信息
+          VERSION=""
+          # 在多个可能的位置查找包的Makefile
+          for makefile in $(find . -name "Makefile" -o -name "*.mk" | xargs grep -l "PKG_NAME.*:=.*$pkg" 2>/dev/null | head -1); do
+            if [ -f "$makefile" ]; then
+              VERSION=$(grep '^PKG_VERSION' "$makefile" | head -1 | cut -d'=' -f2 | tr -d ' ' || echo "")
+              [ -z "$VERSION" ] && VERSION=$(grep '^PKG_RELEASE' "$makefile" | head -1 | cut -d'=' -f2 | tr -d ' ' || echo "")
+              break
+            fi
+          done
+          
+          PACKAGE_LIST="${PACKAGE_LIST}\n| ${pkg} | ${VERSION} | ✅ 已启用 |"
+        done
+        
+        # 获取固件文件列表
+        FIRMWARE_FILES=$(cd bin/targets/*/* && ls -1 *.img *.bin *.tar.gz *.tar 2>/dev/null | head -10 | sed 's/^/- /' | tr '\n' ' ')
+        
+        # 使用 echo 命令逐行写入文件，避免 YAML 中的 heredoc 问题
+        echo "HI5962-NOWIFI" > release_notes.md
+        echo "🚀 OpenWrt 固件发布" >> release_notes.md
+        echo "管理地址: ${{ github.event.inputs.new_ip }}" >> release_notes.md
+        echo "root密码: ${{ github.event.inputs.root_password }}" >> release_notes.md
+        echo "" >> release_notes.md
+        echo "📦 固件插件和系统功能清单" >> release_notes.md
+        echo "" >> release_notes.md
+        echo "## 系统基本信息" >> release_notes.md
+        echo "架构: ${ARCH}" >> release_notes.md
+        echo "目标板: ${TARGET}" >> release_notes.md
+        echo "子目标: ${SUBTARGET}" >> release_notes.md
+        echo "内核版本: ${KERNEL_VER}" >> release_notes.md
+        echo "编译时间: ${BUILD_TIME}" >> release_notes.md
+        echo "" >> release_notes.md
+        echo "## 📊 插件配置清单" >> release_notes.md
+        echo "| 插件名称 | 版本 | 状态 |" >> release_notes.md
+        echo "|----------|------|------|" >> release_notes.md
+        echo -e "${PACKAGE_LIST}" >> release_notes.md
+        echo "" >> release_notes.md
+        echo "## 📈 编译统计" >> release_notes.md
+        echo "已启用包数量: ${ENABLED_PACKAGES}" >> release_notes.md
+        echo "" >> release_notes.md
+        echo "## 📁 固件文件" >> release_notes.md
+        echo "${FIRMWARE_FILES}" >> release_notes.md
+        
+        echo "RELEASE_NOTES_FILE=release_notes.md" >> $GITHUB_ENV
+        echo "status=success" >> $GITHUB_OUTPUT
