@@ -217,69 +217,29 @@ jobs:
         # 获取固件文件
         FIRMWARE_FILES=$(cd bin/targets/*/* && ls -1 *.img *.bin *.tar.gz *.tar 2>/dev/null | head -5 | sed 's/^/- /')
         
-        # 生成release notes
-        cat > release_notes.md << EOL
-HI5962-NOWIFI
-🚀 OpenWrt 固件发布
-管理地址: ${{ github.event.inputs.new_ip }}
-root密码: ${{ github.event.inputs.root_password }}
-
-📦 固件插件和系统功能清单
-
-## 系统基本信息
-架构: $ARCH
-目标板: $TARGET
-子目标: $SUBTARGET
-内核版本: $KERNEL_VER
-编译时间: $BUILD_TIME
-
-## 📊 插件配置清单
-| 插件名称 | 版本 | 状态 |
-|----------|------|------|
-$PACKAGE_LIST
-## 📈 编译统计
-已启用包数量: $ENABLED_PACKAGES
-
-## 📁 固件文件
-$FIRMWARE_FILES
-EOL
+        # 正确的方式：使用 echo 逐行写入
+        echo "HI5962-NOWIFI" > release_notes.md
+        echo "🚀 OpenWrt 固件发布" >> release_notes.md
+        echo "管理地址: ${{ github.event.inputs.new_ip }}" >> release_notes.md
+        echo "root密码: ${{ github.event.inputs.root_password }}" >> release_notes.md
+        echo "" >> release_notes.md
+        echo "📦 固件插件和系统功能清单" >> release_notes.md
+        echo "" >> release_notes.md
+        echo "## 系统基本信息" >> release_notes.md
+        echo "架构: $ARCH" >> release_notes.md
+        echo "目标板: $TARGET" >> release_notes.md
+        echo "子目标: $SUBTARGET" >> release_notes.md
+        echo "内核版本: $KERNEL_VER" >> release_notes.md
+        echo "编译时间: $BUILD_TIME" >> release_notes.md
+        echo "" >> release_notes.md
+        echo "## 📊 插件配置清单" >> release_notes.md
+        echo "| 插件名称 | 版本 | 状态 |" >> release_notes.md
+        echo "|----------|------|------|" >> release_notes.md
+        echo -e "$PACKAGE_LIST" >> release_notes.md
+        echo "## 📈 编译统计" >> release_notes.md
+        echo "已启用包数量: $ENABLED_PACKAGES" >> release_notes.md
+        echo "" >> release_notes.md
+        echo "## 📁 固件文件" >> release_notes.md
+        echo "$FIRMWARE_FILES" >> release_notes.md
 
         echo "RELEASE_NOTES_FILE=release_notes.md" >> $GITHUB_ENV
-
-    - name: Upload firmware directory
-      uses: actions/upload-artifact@main
-      if: steps.organize.outputs.status == 'success' && !cancelled()
-      with:
-        name: OpenWrt_firmware${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
-        path: ${{ env.FIRMWARE }}
-
-    - name: Generate release tag
-      id: tag
-      if: steps.organize.outputs.files_exist == 'true' && env.UPLOAD_RELEASE == 'true' && !cancelled()
-      run: |
-        echo "release_tag=HI5962-NoWiFi-$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_OUTPUT
-
-    - name: Upload firmware to release
-      uses: softprops/action-gh-release@v1
-      if: steps.tag.outputs.status == 'success' && steps.organize.outputs.files_exist == 'true' && !cancelled()
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ steps.tag.outputs.release_tag }}
-        body_path: ${{ env.RELEASE_NOTES_FILE }}
-        files: ${{ env.FIRMWARE }}/*
-
-    - name: Delete workflow runs
-      uses: Mattraks/delete-workflow-runs@main
-      with:
-        retain_days: 1
-        keep_minimum_runs: 3
-
-    - name: Remove old Releases
-      uses: dev-drprasad/delete-older-releases@v0.2.1
-      if: steps.organize.outputs.files_exist == 'true' && env.UPLOAD_RELEASE == 'true' && !cancelled()
-      with:
-        keep_latest: 5
-        delete_tags: true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
