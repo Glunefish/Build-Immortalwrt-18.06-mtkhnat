@@ -217,29 +217,32 @@ jobs:
         # 获取固件文件
         FIRMWARE_FILES=$(cd bin/targets/*/* && ls -1 *.img *.bin *.tar.gz *.tar 2>/dev/null | head -5 | sed 's/^/- /')
         
-        # 正确的方式：使用 echo 逐行写入
-        echo "HI5962-NOWIFI" > release_notes.md
-        echo "🚀 OpenWrt 固件发布" >> release_notes.md
-        echo "管理地址: ${{ github.event.inputs.new_ip }}" >> release_notes.md
-        echo "root密码: ${{ github.event.inputs.root_password }}" >> release_notes.md
-        echo "" >> release_notes.md
-        echo "📦 固件插件和系统功能清单" >> release_notes.md
-        echo "" >> release_notes.md
-        echo "## 系统基本信息" >> release_notes.md
-        echo "架构: $ARCH" >> release_notes.md
-        echo "目标板: $TARGET" >> release_notes.md
-        echo "子目标: $SUBTARGET" >> release_notes.md
-        echo "内核版本: $KERNEL_VER" >> release_notes.md
-        echo "编译时间: $BUILD_TIME" >> release_notes.md
-        echo "" >> release_notes.md
-        echo "## 📊 插件配置清单" >> release_notes.md
-        echo "| 插件名称 | 版本 | 状态 |" >> release_notes.md
-        echo "|----------|------|------|" >> release_notes.md
-        echo -e "$PACKAGE_LIST" >> release_notes.md
-        echo "## 📈 编译统计" >> release_notes.md
-        echo "已启用包数量: $ENABLED_PACKAGES" >> release_notes.md
-        echo "" >> release_notes.md
-        echo "## 📁 固件文件" >> release_notes.md
-        echo "$FIRMWARE_FILES" >> release_notes.md
+        # 生成 release notes
+        {
+        echo "HI5962-NOWIFI"
+        echo "🚀 OpenWrt 固件发布"
+        echo "管理地址: ${{ github.event.inputs.new_ip }}"
+        echo "root密码: ${{ github.event.inputs.root_password }}"
+        echo ""
+        echo "📦 固件插件和系统功能清单"
+        echo ""
+        echo "## 系统基本信息"
+        echo "架构: $ARCH"
+        echo "目标板: $TARGET"
+        echo "子目标: $SUBTARGET"
+        echo "内核版本: $KERNEL_VER"
+        echo "编译时间: $BUILD_TIME"
+        echo ""
+        echo "## 📊 插件配置清单"
+        echo "| 插件名称 | 版本 | 状态 |"
+        echo "|----------|------|------|"
+        echo -e "$PACKAGE_LIST"
+        echo "## 📈 编译统计"
+        echo "已启用包数量: $ENABLED_PACKAGES"
+        echo ""
+        echo "## 📁 固件文件"
+        echo "$FIRMWARE_FILES"
+        } > release_notes.md
 
         echo "RELEASE_NOTES_FILE=release_notes.md" >> $GITHUB_ENV
+        echo "status=success" >> $GITHUB_OUTPUT  # 这行是关键！
