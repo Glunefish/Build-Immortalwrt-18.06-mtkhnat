@@ -166,10 +166,11 @@ jobs:
       if: steps.compile.outputs.status == 'success' && !cancelled()
       run: |
         cd openwrt
-        echo "## 📦 固件插件和系统功能清单" > $GITHUB_WORKSPACE/package_report.md
-        echo "" >> $GITHUB_WORKSPACE/package_report.md
-        echo "### 系统基本信息" >> $GITHUB_WORKSPACE/package_report.md
-        echo "" >> $GITHUB_WORKSPACE/package_report.md
+        # 改为当前目录，不要用 $GITHUB_WORKSPACE
+        echo "## 📦 固件插件和系统功能清单" > package_report.md
+        echo "" >> package_report.md
+        echo "### 系统基本信息" >> package_report.md
+        echo "" >> package_report.md
         
         # 获取目标系统信息
         if [ -f .config ]; then
@@ -178,18 +179,18 @@ jobs:
           TARGET_SUBTARGET=$(grep '^CONFIG_TARGET_SUBTARGET=' .config | cut -d'=' -f2 | tr -d '"')
           KERNEL_VERSION=$(grep '^LINUX_VERSION=' include/kernel-version.mk | cut -d'=' -f2 | tr -d ' ')
           
-          echo "- **架构**: $TARGET_ARCH" >> $GITHUB_WORKSPACE/package_report.md
-          echo "- **目标板**: $TARGET_BOARD" >> $GITHUB_WORKSPACE/package_report.md
-          echo "- **子目标**: $TARGET_SUBTARGET" >> $GITHUB_WORKSPACE/package_report.md
-          echo "- **内核版本**: $KERNEL_VERSION" >> $GITHUB_WORKSPACE/package_report.md
-          echo "- **编译时间**: $(date +"%Y-%m-%d %H:%M:%S")" >> $GITHUB_WORKSPACE/package_report.md
+          echo "- **架构**: $TARGET_ARCH" >> package_report.md
+          echo "- **目标板**: $TARGET_BOARD" >> package_report.md
+          echo "- **子目标**: $TARGET_SUBTARGET" >> package_report.md
+          echo "- **内核版本**: $KERNEL_VERSION" >> package_report.md
+          echo "- **编译时间**: $(date +"%Y-%m-%d %H:%M:%S")" >> package_report.md
         fi
         
-        echo "" >> $GITHUB_WORKSPACE/package_report.md
-        echo "### 📊 插件配置清单" >> $GITHUB_WORKSPACE/package_report.md
-        echo "" >> $GITHUB_WORKSPACE/package_report.md
-        echo "| 类别 | 插件名称 | 版本 | 状态 |" >> $GITHUB_WORKSPACE/package_report.md
-        echo "|------|----------|------|------|" >> $GITHUB_WORKSPACE/package_report.md
+        echo "" >> package_report.md
+        echo "### 📊 插件配置清单" >> package_report.md
+        echo "" >> package_report.md
+        echo "| 类别 | 插件名称 | 版本 | 状态 |" >> package_report.md
+        echo "|------|----------|------|------|" >> package_report.md
         
         # 提取所有已启用的包信息
         if [ -f .config ]; then
@@ -206,14 +207,14 @@ jobs:
               if [ -z "$version" ]; then
                 version=$(find package -name "$pkg" -type d 2>/dev/null | head -1 | xargs grep "PKG_VERSION" 2>/dev/null | head -1 | cut -d'=' -f2 | tr -d ' ' || echo "未知")
               fi
-              echo "| $pkg_type | $pkg_name | $version | ✅ 已启用 |" >> $GITHUB_WORKSPACE/package_report.md
+              echo "| $pkg_type | $pkg_name | $version | ✅ 已启用 |" >> package_report.md
             elif [[ $pkg == luci-theme-* ]]; then
               pkg_type="主题"
               version=$(find . -name "Makefile" -exec grep -l "PKG_NAME.*$pkg" {} \; 2>/dev/null | head -1 | xargs grep "PKG_VERSION" 2>/dev/null | head -1 | cut -d'=' -f2 | tr -d ' ' || echo "")
               if [ -z "$version" ]; then
                 version=$(find package -name "$pkg" -type d 2>/dev/null | head -1 | xargs grep "PKG_VERSION" 2>/dev/null | head -1 | cut -d'=' -f2 | tr -d ' ' || echo "未知")
               fi
-              echo "| $pkg_type | $pkg_name | $version | ✅ 已启用 |" >> $GITHUB_WORKSPACE/package_report.md
+              echo "| $pkg_type | $pkg_name | $version | ✅ 已启用 |" >> package_report.md
             fi
           done
           
@@ -225,107 +226,30 @@ jobs:
               if [ -z "$version" ]; then
                 version=$(find package -name "$pkg" -type d 2>/dev/null | head -1 | xargs grep "PKG_VERSION" 2>/dev/null | head -1 | cut -d'=' -f2 | tr -d ' ' || echo "未知")
               fi
-              echo "| 工具 | $pkg | $version | ✅ 已启用 |" >> $GITHUB_WORKSPACE/package_report.md
+              echo "| 工具 | $pkg | $version | ✅ 已启用 |" >> package_report.md
             fi
           done
         fi
         
-        echo "" >> $GITHUB_WORKSPACE/package_report.md
-        echo "### 🔧 内核特性" >> $GITHUB_WORKSPACE/package_report.md
-        echo "" >> $GITHUB_WORKSPACE/package_report.md
+        echo "" >> package_report.md
+        echo "### 🔧 内核特性" >> package_report.md
+        echo "" >> package_report.md
         
         # 检查内核特性
         if grep -q "CONFIG_KERNEL_CPU_FREQ=y" .config; then
-          echo "- CPU 频率调节: ✅ 已启用" >> $GITHUB_WORKSPACE/package_report.md
+          echo "- CPU 频率调节: ✅ 已启用" >> package_report.md
         fi
         if grep -q "CONFIG_KERNEL_SWAP=y" .config; then
-          echo "- 交换分区: ✅ 已启用" >> $GITHUB_WORKSPACE/package_report.md
+          echo "- 交换分区: ✅ 已启用" >> package_report.md
         fi
         if grep -q "CONFIG_KERNEL_ZRAM=y" .config; then
-          echo "- ZRAM 压缩内存: ✅ 已启用" >> $GITHUB_WORKSPACE/package_report.md
+          echo "- ZRAM 压缩内存: ✅ 已启用" >> package_report.md
         fi
         
         # 统计包数量
         ENABLED_PACKAGES=$(grep '^CONFIG_PACKAGE_' .config | grep '=y' | wc -l)
-        echo "" >> $GITHUB_WORKSPACE/package_report.md
-        echo "### 📈 编译统计" >> $GITHUB_WORKSPACE/package_report.md
-        echo "- 已启用包数量: $ENABLED_PACKAGES" >> $GITHUB_WORKSPACE/package_report.md
+        echo "" >> package_report.md
+        echo "### 📈 编译统计" >> package_report.md
+        echo "- 已启用包数量: $ENABLED_PACKAGES" >> package_report.md
         
         echo "package_report_generated=true" >> $GITHUB_OUTPUT
-
-    - name: Upload bin directory
-      uses: actions/upload-artifact@main
-      if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
-      with:
-        name: OpenWrt_bin${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
-        path: openwrt/bin
-
-    - name: Organize files and check firmware
-      id: organize
-      if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
-      run: |
-        cd openwrt/bin/targets/*/*
-        rm -rf packages
-        echo "FIRMWARE=$PWD" >> $GITHUB_ENV
-        
-        # 检查是否存在固件文件
-        if ls *.img *.bin *.tar.gz *.tar 2>/dev/null | grep -q .; then
-          echo "files_exist=true" >> $GITHUB_OUTPUT
-          echo "status=success" >> $GITHUB_OUTPUT
-          echo "Found firmware files:" >&2
-          ls -la *.img *.bin *.tar.gz *.tar 2>/dev/null || true
-        else
-          echo "files_exist=false" >> $GITHUB_OUTPUT
-          echo "status=failure" >> $GITHUB_OUTPUT
-          echo "No firmware files found in $PWD" >&2
-          ls -la >&2
-        fi
-
-    - name: Create Release
-      if: steps.organize.outputs.files_exist == 'true' && env.UPLOAD_RELEASE == 'true' && !cancelled()
-      id: create_release
-      uses: softprops/action-gh-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: "HI5962-${{ github.run_id }}"
-        body: |
-          🚀 固件编译完成
-          📥 可立即下载使用
-
-          **管理地址**: ${{ github.event.inputs.new_ip }}
-          **用户名**: root
-          **密码**: ${{ github.event.inputs.root_password }}
-
-          > 🔧 详细的插件列表正在生成中...
-        files: ${{ env.FIRMWARE }}/*
-
-    - name: Update Release with Package Info
-      if: always() && steps.create_release.outputs.status == 'success'
-      run: |
-        # 进入 package_report.md 文件所在目录
-        cd openwrt
-        
-        # 检查文件是否存在
-        if [ -f "package_report.md" ]; then
-          echo "找到 package_report.md，开始更新 Release..."
-          
-          # 创建完整的 Release Body 文件
-          {
-            echo "## 🚀 OpenWrt 固件发布"
-            echo ""
-            echo "**管理地址**: ${{ github.event.inputs.new_ip }}"
-            echo "**root密码**: ${{ github.event.inputs.root_password }}"
-            echo ""
-            cat package_report.md
-          } > ../full_release_body.md
-          
-          # 更新 Release
-          gh release edit "HI5962-${{ github.run_id }}" --notes-file ../full_release_body.md
-          echo "✅ Release 信息已更新"
-        else
-          echo "❌ package_report.md 文件未找到，无法更新详细插件信息"
-          find . -name "package_report.md" 2>/dev/null || echo "在 openwrt 目录下未找到该文件"
-        fi
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
