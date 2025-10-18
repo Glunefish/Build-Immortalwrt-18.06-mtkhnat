@@ -229,64 +229,76 @@ jobs:
         FIRMWARE_LIST=$(ls -lh *.img *.bin *.tar.gz *.tar 2>/dev/null || echo "No firmware files")
 
         # ========== 提取已安装软件包列表 ==========
-        # 找到 root 目录（例如：mipsel_24kc）
-        TARGET_DIR=$(ls -d root-*/ | head -n1)
-        if [ -z "$TARGET_DIR" ] || [ ! -f "$TARGET_DIR/usr/lib/opkg/status" ]; then
-          echo "⚠️ Warning: Cannot find opkg status file at $TARGET_DIR/usr/lib/opkg/status"
-          PACKAGE_TABLE="> _Package list not available — status file missing_"
+        # 检查是否有可用的 root 目录
+        echo "🔍 Looking for root-* directories..."
+        ROOT_DIRS=$(find . -maxdepth 1 -type d -name "root-*" 2>/dev/null || true)
+        
+        if [ -z "$ROOT_DIRS" ]; then
+          echo "⚠️ Warning: No root-* directories found"
+          PACKAGE_TABLE="> _Package list not available — root directory missing_"
+          PACKAGE_COUNT=0
         else
-          echo "🔍 Parsing installed packages from $TARGET_DIR/usr/lib/opkg/status"
+          # 使用找到的第一个 root 目录
+          ROOT_DIR=$(echo "$ROOT_DIRS" | head -n1)
+          OPKG_STATUS_FILE="$ROOT_DIR/usr/lib/opkg/status"
+          
+          if [ ! -f "$OPKG_STATUS_FILE" ]; then
+            echo "⚠️ Warning: Cannot find opkg status file at $OPKG_STATUS_FILE"
+            PACKAGE_TABLE="> _Package list not available — status file missing_"
+            PACKAGE_COUNT=0
+          else
+            echo "🔍 Parsing installed packages from $OPKG_STATUS_FILE"
 
-          # 生成 Markdown 表格头
-          echo "| Package | Version | Source |" > packages.md
-          echo "|--------|--------|--------|" >> packages.md
+            # 生成 Markdown 表格头
+            echo "| Package | Version | Source |" > packages.md
+            echo "|--------|--------|--------|" >> packages.md
 
-          # 解析 opkg status 文件
-          awk '
-          BEGIN { pkg=""; ver=""; src="" }
-          /^Package:/ { pkg = $2 }
-          /^Version:/ { ver = $2 }
-          /^Source:/ { src = $2; gsub(/.*\//, "", src); gsub(/-.*/, "", src); next }
-          /^$/ {
-            if (pkg != "" && ver != "") {
-              # 推断 source
-              if (src == "") {
-                if (pkg ~ /^luci-/ ) {
-                  src = "LuCI"
-                } else if (pkg ~ /^(lib|uci|uclibc|kernel)/ || pkg ~ /^(base-files|block-mount)/) {
-                  src = "OpenWrt"
-                } else {
-                  src = "Community"
+            # 解析 opkg status 文件
+            awk '
+            BEGIN { pkg=""; ver=""; src="" }
+            /^Package:/ { pkg = $2 }
+            /^Version:/ { ver = $2 }
+            /^Source:/ { src = $2; gsub(/.*\//, "", src); gsub(/-.*/, "", src); next }
+            /^$/ {
+              if (pkg != "" && ver != "") {
+                # 推断 source
+                if (src == "") {
+                  if (pkg ~ /^luci-/ ) {
+                    src = "LuCI"
+                  } else if (pkg ~ /^(lib|uci|uclibc|kernel)/ || pkg ~ /^(base-files|block-mount)/) {
+                    src = "OpenWrt"
+                  } else {
+                    src = "Community"
+                  }
                 }
+                gsub(/\|/, "\\|", pkg)
+                gsub(/\|/, "\\|", ver)
+                gsub(/\|/, "\\|", src)
+                printf "| %s | %s | %s |\n", pkg, ver, src
               }
-              gsub(/\|/, "\\|", pkg)
-              gsub(/\|/, "\\|", ver)
-              gsub(/\|/, "\\|", src)
-              printf "| %s | %s | %s |\n", pkg, ver, src
+              pkg=""; ver=""; src=""
             }
-            pkg=""; ver=""; src=""
-          }
-          END {
-            if (pkg != "" && ver != "") {
-              if (src == "") {
-                if (pkg ~ /^luci-/ ) src = "LuCI"
-                else if (pkg ~ /^(lib|uci|uclibc|kernel)/ || pkg ~ /^(base-files|block-mount)/) src = "OpenWrt"
-                else src = "Community"
+            END {
+              if (pkg != "" && ver != "") {
+                if (src == "") {
+                  if (pkg ~ /^luci-/ ) src = "LuCI"
+                  else if (pkg ~ /^(lib|uci|uclibc|kernel)/ || pkg ~ /^(base-files|block-mount)/) src = "OpenWrt"
+                  else src = "Community"
+                }
+                gsub(/\|/, "\\|", pkg)
+                gsub(/\|/, "\\|", ver)
+                gsub(/\|/, "\\|", src)
+                printf "| %s | %s | %s |\n", pkg, ver, src
               }
-              gsub(/\|/, "\\|", pkg)
-              gsub(/\|/, "\\|", ver)
-              gsub(/\|/, "\\|", src)
-              printf "| %s | %s | %s |\n", pkg, ver, src
-            }
-          }' "$TARGET_DIR/usr/lib/opkg/status" >> packages.md
+            }' "$OPKG_STATUS_FILE" >> packages.md
 
-          PACKAGE_TABLE=$(cat packages.md)
-          PACKAGE_COUNT=$(grep -c '|' packages.md | awk 'NR==1{print $1-2}')
-          echo "📦 Found $PACKAGE_COUNT packages installed."
+            PACKAGE_TABLE=$(cat packages.md)
+            PACKAGE_COUNT=$(grep -c '|' packages.md | awk 'NR==1{print $1-2}')
+            echo "📦 Found $PACKAGE_COUNT packages installed."
+          fi
         fi
 
-        # ========== 生成 release.txt - 修正写法 ==========
-        # 使用 echo 和 printf 逐行写入，避免 EOF 问题
+        # ========== 生成 release.txt - 严格验证后生成 ==========
         > release.txt
         echo "📌 **Build Information**" >> release.txt
         echo "" >> release.txt
@@ -305,10 +317,15 @@ jobs:
         echo "$FIRMWARE_LIST" >> release.txt
         echo "\`\`\`" >> release.txt
         echo "" >> release.txt
-        echo "📦 **Installed Packages in Firmware** ($PACKAGE_COUNT packages)" >> release.txt
-        echo "" >> release.txt
-        cat packages.md >> release.txt
-        echo "" >> release.txt
+        if [ $PACKAGE_COUNT -gt 0 ]; then
+          echo "📦 **Installed Packages in Firmware** ($PACKAGE_COUNT packages)" >> release.txt
+          echo "" >> release.txt
+          cat packages.md >> release.txt
+          echo "" >> release.txt
+        else
+          echo "📦 **Installed Packages in Firmware**: Not available" >> release.txt
+          echo "" >> release.txt
+        fi
         echo "🤖 Built on GitHub Actions" >> release.txt
 
         echo "✅ Successfully generated release.txt with package list"
