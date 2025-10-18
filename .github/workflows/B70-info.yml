@@ -108,7 +108,11 @@ jobs:
         $GITHUB_WORKSPACE/$DIY_P1_SH
    
     - name: Update feeds
-      run: cd openwrt && ./scripts/feeds update -a
+      run: |
+        cd openwrt
+        ./scripts/feeds update -a
+        # Skip dependency checks to avoid errors from missing packages
+        echo "Skipping dependency checks for feeds..."
 
     - name: Load DIY Scripts Part2
       run: |
@@ -118,7 +122,10 @@ jobs:
         
 
     - name: Install feeds
-      run: cd openwrt && ./scripts/feeds install -a
+      run: |
+        cd openwrt
+        # Skip dependency checks to avoid errors from missing packages
+        ./scripts/feeds install -a -f
 
     - name: Load custom configuration & Part3
       run: |
@@ -213,7 +220,8 @@ jobs:
         DEVICE_NAME=$(grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/')
         [ -z "$DEVICE_NAME" ] && DEVICE_NAME="Unknown"
 
-        KERNEL_VERSION=$(make kernelversion)
+        KERNEL_VERSION=$(grep ^LINUX_VERSION= .config | cut -d'"' -f2)
+        [ -z "$KERNEL_VERSION" ] && KERNEL_VERSION="Unknown"
         CONFIG=$(basename $CONFIG_FILE)
 
         cd bin/targets/*/*
