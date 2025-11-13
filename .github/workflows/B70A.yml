@@ -99,10 +99,26 @@ jobs:
         ccache: 'true'
         mixkey: 'openwrt6-mt7621-hi5962'
         prefix: ${{ github.workspace }}/openwrt
-
-    - name: Load custom feeds & Part1
+        
+    - name: Set environment variables
       run: |
-        [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
+        export ROOT_PASSWORD="${{ github.event.inputs.root_password }}"
+        export ORIGINAL_IP="${{ github.event.inputs.original_ip }}"
+        export NEW_IP="${{ github.event.inputs.new_ip }}"
+        echo "Environment variables set: ROOT_PASSWORD=$ROOT_PASSWORD, ORIGINAL_IP=$ORIGINAL_IP, NEW_IP=$NEW_IP"
+
+    - name: Load custom feeds
+      run: |
+        [ -e $FEEDS_CONF ] && cp $FEEDS_CONF openwrt/feeds.conf.default
+        if [ -f "$GITHUB_WORKSPACE/$CONFIG_FILE" ]; then
+          echo "Applying configuration: $CONFIG_FILE"
+          cp "$GITHUB_WORKSPACE/$CONFIG_FILE" openwrt/.config
+        else
+          echo "ERROR: Config file $CONFIG_FILE not found!"
+          echo "Looking in: $GITHUB_WORKSPACE/"
+          ls -la "$GITHUB_WORKSPACE/" || true
+          exit 1
+        fi
         chmod +x $DIY_P1_SH
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_P1_SH
@@ -110,19 +126,11 @@ jobs:
     - name: Update feeds & Install feeds
       run: cd openwrt && ./scripts/feeds update -a && ./scripts/feeds install -a
 
-    - name: Load DIY Scripts Part2
+    - name: Load configuration and DIY Scripts Part2
       run: |
         chmod +x $DIY_P2_SH
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_P2_SH
-
-    - name: Load custom configuration
-      run: |
-        [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
-        cd openwrt
-        export ROOT_PASSWORD="${{ github.event.inputs.root_password }}"
-        export ORIGINAL_IP="${{ github.event.inputs.original_ip }}"
-        export NEW_IP="${{ github.event.inputs.new_ip }}"
 
     - name: SSH connection to Actions
       uses: P3TERX/ssh2actions@v1.0.0
