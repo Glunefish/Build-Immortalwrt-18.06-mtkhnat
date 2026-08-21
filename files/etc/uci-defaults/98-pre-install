@@ -1,0 +1,6 @@
+#!/bin/sh
+# 安装 /etc/pre_install/ 目录下的所有 .ipk 包
+[ -n "$(ls /etc/pre_install)" ] && opkg install /etc/pre_install/*.ipk --force-depends
+# 安装完成后删除脚本自身和 ipk 目录
+rm -rf /etc/pre_install
+exit 0
